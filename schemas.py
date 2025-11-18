@@ -1,48 +1,67 @@
 """
-Database Schemas
+Database Schemas for AI Model Rankings
 
-Define your MongoDB collection schemas here using Pydantic models.
-These schemas are used for data validation in your application.
-
-Each Pydantic model represents a collection in your database.
-Model name is converted to lowercase for the collection name:
-- User -> "user" collection
-- Product -> "product" collection
-- BlogPost -> "blogs" collection
+Each Pydantic model represents a MongoDB collection. The collection name is the
+lowercased class name. For example: AIModel -> "aimodel".
 """
+from typing import Optional, List, Dict
+from pydantic import BaseModel, Field, HttpUrl
 
-from pydantic import BaseModel, Field
-from typing import Optional
 
-# Example schemas (replace with your own):
+class Category(BaseModel):
+    """
+    AI model category, e.g., "Chat/Assistant", "Coding", "Vision".
+    Collection name: "category"
+    """
+    name: str = Field(..., description="Category display name")
+    slug: str = Field(..., description="URL-friendly identifier, unique")
+    description: Optional[str] = Field(None, description="Short description")
+    icon: Optional[str] = Field(None, description="Icon name (lucide) or emoji")
 
+
+class AIModel(BaseModel):
+    """
+    AI model metadata. Collection name: "aimodel"
+    """
+    name: str = Field(..., description="Model name, e.g., GPT-5.1")
+    vendor: str = Field(..., description="Provider, e.g., OpenAI, Meta, Mistral")
+    open_source: bool = Field(..., description="Whether the model is open-source")
+    parameters_b: Optional[float] = Field(None, description="Parameters in billions")
+    modalities: List[str] = Field(default_factory=list, description="e.g., text, vision, audio")
+    categories: List[str] = Field(default_factory=list, description="List of category slugs")
+    context_length: Optional[int] = Field(None, description="Max context tokens")
+    url: Optional[HttpUrl] = None
+    tags: List[str] = Field(default_factory=list)
+
+
+class Benchmark(BaseModel):
+    """
+    Benchmark entity, e.g., MMLU, GSM8K, HumanEval, MT-Bench
+    Collection name: "benchmark"
+    """
+    name: str
+    slug: str
+    description: Optional[str] = None
+    higher_is_better: bool = Field(True, description="Whether higher score is better")
+    unit: Optional[str] = Field(None, description="e.g., %, pass@1, score")
+    domain: Optional[str] = Field(None, description="task domain, e.g., reasoning, coding")
+
+
+class Score(BaseModel):
+    """
+    Score of a model on a benchmark. Collection name: "score"
+    """
+    model_id: str = Field(..., description="ObjectId string of AIModel")
+    benchmark_id: str = Field(..., description="ObjectId string of Benchmark")
+    score: float = Field(..., description="Numeric score")
+    source: Optional[str] = Field(None, description="Source or paper link")
+    date: Optional[str] = Field(None, description="ISO date of evaluation")
+
+
+# Example additional schema kept for reference in the DB viewer
 class User(BaseModel):
-    """
-    Users collection schema
-    Collection name: "user" (lowercase of class name)
-    """
-    name: str = Field(..., description="Full name")
-    email: str = Field(..., description="Email address")
-    address: str = Field(..., description="Address")
-    age: Optional[int] = Field(None, ge=0, le=120, description="Age in years")
-    is_active: bool = Field(True, description="Whether user is active")
-
-class Product(BaseModel):
-    """
-    Products collection schema
-    Collection name: "product" (lowercase of class name)
-    """
-    title: str = Field(..., description="Product title")
-    description: Optional[str] = Field(None, description="Product description")
-    price: float = Field(..., ge=0, description="Price in dollars")
-    category: str = Field(..., description="Product category")
-    in_stock: bool = Field(True, description="Whether product is in stock")
-
-# Add your own schemas here:
-# --------------------------------------------------
-
-# Note: The Flames database viewer will automatically:
-# 1. Read these schemas from GET /schema endpoint
-# 2. Use them for document validation when creating/editing
-# 3. Handle all database operations (CRUD) directly
-# 4. You don't need to create any database endpoints!
+    name: str
+    email: str
+    address: str
+    age: Optional[int] = None
+    is_active: bool = True
